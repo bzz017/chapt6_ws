@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="imu_sensor" params="parent link_name joint_name *origin">
+    <link name="${link_name}">
+    <!-- imu 传感器可视化体 -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.02 0.02 0.02" />
+        </geometry>
+        <material name="imu_material">
+          <color rgba="1.0 0.0 0.0 0.8" />
+        </material>
+      </visual>
+      <!-- imu 传感器碰撞体 -->
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.02 0.02 0.02" />
+        </geometry>
+      </collision>
+      <!-- imu 传感器惯性体 -->
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="0.01" />
+        <inertia ixx="6.67e-8" ixy="0" ixz="0" iyy="6.67e-8" iyz="0" izz="6.67e-8" />
+      </inertial>
+    </link>
+    <!-- imu 传感器关节 -->
+    <joint name="${joint_name}" type="fixed">
+      <parent link="${parent}" />
+      <child link="${link_name}" />
+      <xacro:insert_block name="origin" />
+    </joint>
+  </xacro:macro>
+
+</robot>

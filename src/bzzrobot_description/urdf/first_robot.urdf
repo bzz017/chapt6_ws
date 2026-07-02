@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot name="first_robot">
+  <!-- 机器人身体部分 -->
+  <link name="base_link">
+    <!-- 部件的外部描述 -->
+    <visual>
+
+      <!-- 沿着自己的几何中心的位置和方向 -->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <!-- 几何形状 -->
+
+      <geometry>
+        <!-- 圆柱体 单位：米 -->
+        <cylinder radius="0.10" length="0.12" />
+      </geometry>
+
+      <!-- 材质颜色 -->
+      <material name="first_robot_material">
+        <!-- 颜色参数依次为：R G B A 单位：0-1.0 ,A为透明度 -->
+        <color rgba="0.5 0.5 0.5 0.7" />
+      </material>
+
+    </visual>
+  </link>
+
+  <!-- 机器人IMU传感器, 用于测量机器人的位置和方向 -->
+  <link name="imu_link">
+    <!-- 部件的外部描述 -->
+    <visual>
+
+      <!-- 沿着自己的几何中心的位置和方向 -->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <!-- 几何形状 -->
+
+      <geometry>
+        <!-- 矱体 单位：米 ,size为长宽高 -->
+        <box size="0.02 0.02 0.02" />
+      </geometry>
+
+      <!-- 材质颜色 -->
+      <material name="imu_material">
+        <!-- 颜色参数依次为：R G B A 单位：0-1.0 ,A为透明度 -->
+        <color rgba="1.0 1.0 1.0 0.8" />
+      </material>
+
+    </visual>
+  </link>
+
+  <!-- 机器人关节, 用于连接身体部分和IMU传感器，fixed表示固定关节，不旋转不移动 -->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0 0 0.13" rpy="0 0 0" />  <!-- 子坐标在父坐标中的位置和方向 -->
+  </joint>
+
+</robot>

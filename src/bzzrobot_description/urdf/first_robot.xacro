@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot name="first_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="${base_radius}" length="${base_length}" />
+      </geometry>
+      <material name="first_robot_material">
+        <color rgba="0.5 0.5 0.5 0.7" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="imu_link_top">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}" />
+      </geometry>
+      <material name="imu_material_top">
+        <color rgba="1.0 0.0 0.0 0.8" />
+      </material>
+    </visual>
+  </link>
+
+  <link name="imu_link_bottom">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="${imu_size} ${imu_size} ${imu_size}" />
+      </geometry>
+      <material name="imu_material_bottom">
+        <color rgba="0.0 1.0 0.0 0.8" />
+      </material>
+    </visual>
+  </link>
+
+  <joint name="imu_joint_top" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link_top" />
+    <origin xyz="${imu_offset_top}" rpy="0 0 0" />
+  </joint>
+
+  <joint name="imu_joint_bottom" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link_bottom" />
+    <origin xyz="${imu_offset_bottom}" rpy="0 0 0" />
+  </joint>
+
+  <xacro:property name="base_radius" value="0.10" />
+  <xacro:property name="base_length" value="0.20" />
+  <xacro:property name="imu_size" value="0.02" />
+  <xacro:property name="imu_offset_top" value="0.0 0.0 0.06" />
+  <xacro:property name="imu_offset_bottom" value="0.0 0.0 -0.06" />
+
+</robot>

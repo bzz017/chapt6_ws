@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<robot name="bzz002" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="support_radius" value="0.02" />
+  <xacro:property name="support_height" value="0.20" />
+
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/base.urdf.xacro" />
+
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/sensor/imu.urdf.xacro" />
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/sensor/camera.urdf.xacro" />
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/sensor/laser.urdf.xacro" />
+
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/actuator/wheel.urdf.xacro" />
+
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/actuator/caster.urdf.xacro" />
+
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/plugins/gazebo_control_plugin.xacro" />
+  <xacro:include filename="$(find bzzrobot_description)/urdf/bzz2robot/plugins/gazebo_sensor_plugin.xacro" />
+
+
+  <!-- 相机光学坐标系link（虚拟部件） -->
+  <link name="camera_link_optical" />
+  
+  <joint name="camera_joint_optical" type="fixed">
+      <parent link="camera_link" />
+      <child link="camera_link_optical" />
+      <origin xyz="0 0 0" rpy="0 ${pi/2} 0" />
+  </joint>
+
+
+  <!-- 支持链接link -->
+  <link name="support_link">
+    <!-- 支持链接可视化体 -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="${support_radius}" length="${support_height}" />
+      </geometry>
+      <material name="support_material">
+        <color rgba="0.5 0.5 0.5 0.9" />
+      </material>
+    </visual>
+    <!-- 支持链接碰撞碰撞体 -->
+    <collision>  
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="${support_radius}" length="${support_height}" />
+      </geometry>
+    </collision>
+    <!-- 支持链接惯性体 -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.5" />
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.00005" />
+    </inertial>
+  </link>
+
+  <joint name="support_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="support_link" />
+    <origin xyz="0 0 0.2" rpy="0 0 0" />
+  </joint>
+  
+  <gazebo reference="support_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+
+
+
+  <xacro:imu_sensor parent="base_link" link_name="imu_link" joint_name="imu_joint">
+    <origin xyz=" 0 0 0.05" rpy="0 0 0" />
+  </xacro:imu_sensor>
+
+
+  <xacro:camera_sensor parent="base_link" link_name="camera_link" joint_name="camera_joint">
+    <origin xyz="0.15 0 0.10" rpy="0 0 0" />
+  </xacro:camera_sensor>
+
+  <xacro:laser_sensor parent="support_link" link_name="laser_link" joint_name="laser_joint">
+    <origin xyz="0 0 ${support_height / 2}" rpy="0 0 0" />
+  </xacro:laser_sensor>
+
+
+  <xacro:wheel_actuator parent="base_link" link_name="left_wheel" joint_name="left_wheel_joint">
+    <origin xyz="0 0.15 -0.1" rpy="0 0 0" />
+  </xacro:wheel_actuator>
+
+  <xacro:wheel_actuator parent="base_link" link_name="right_wheel" joint_name="right_wheel_joint">
+    <origin xyz="0 -0.15 -0.1" rpy="0 0 0" />
+  </xacro:wheel_actuator>
+
+  <xacro:caster_wheel parent="base_link" link_name="front_caster" joint_name="front_caster_joint">
+    <origin xyz="0.08 0 -0.1" rpy="0 0 0" />
+  </xacro:caster_wheel>
+
+  <xacro:caster_wheel parent="base_link" link_name="back_caster" joint_name="back_caster_joint">
+    <origin xyz="-0.08 0 -0.1" rpy="0 0 0" />
+  </xacro:caster_wheel>
+
+  <!-- 传感器插件 -->
+  <xacro:laser_plugin link_name="laser_link" />
+  <xacro:imu_plugin link_name="imu_link" />
+  <xacro:depth_camera_plugin link_name="camera_link_optical" />
+
+  <!-- 两轮差速驱动插件 -->
+  <xacro:diff_drive_plugin 
+    left_joint="left_wheel_joint" 
+    right_joint="right_wheel_joint" 
+    wheel_separation="0.30"   
+    wheel_radius="0.032" />
+
+
+
+
+  <!-- 关节状态发布插件：将所有关节状态发布到 /joint_states -->
+  <!-- 供 robot_state_publisher 使用以计算 TF 变换 -->
+  <!-- 注意：caster关节是fixed类型，Gazebo中不存在continuous关节，所以只发布轮子关节 -->
+  <gazebo>
+    <plugin name="joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+      <joint_name>left_wheel_joint</joint_name>
+      <joint_name>right_wheel_joint</joint_name>
+      <publish_rate>50</publish_rate>
+    </plugin>
+  </gazebo>
+
+</robot>

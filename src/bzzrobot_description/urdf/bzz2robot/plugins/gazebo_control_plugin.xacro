@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================
+       两轮差速驱动 Gazebo 插件配置
+       libgazebo_ros_diff_drive.so — 将 /cmd_vel 转换为左右轮转速
+  ============================================ -->
+
+  <xacro:macro name="diff_drive_plugin" 
+               params="left_joint right_joint 
+                       wheel_separation wheel_radius">
+
+    <gazebo>
+      <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+
+        <!-- 关节名称 -->
+        <left_joint>${left_joint}</left_joint>
+        <right_joint>${right_joint}</right_joint>
+
+        <!-- 轮子几何参数 -->
+        <wheel_separation>${wheel_separation}</wheel_separation>  <!-- 左右轮间距（m） -->
+        <wheel_diameter>${2 * wheel_radius}</wheel_diameter>      <!-- 轮子直径（m） -->
+
+        <!-- 扭矩与加速度限制 -->
+        <max_wheel_torque>10.0</max_wheel_torque>        <!-- 最大扭矩（Nm） -->
+        <max_wheel_acceleration>5.0</max_wheel_acceleration> <!-- 最大角加速度（rad/s²） -->
+
+        <!-- 话题配置 -->
+        <command_topic>cmd_vel</command_topic>            <!-- 接收速度指令的话题 -->
+
+        <!-- 里程计发布 -->
+        <publish_odom>true</publish_odom>                <!-- 是否发布里程计 -->
+        <odometry_topic>odom</odometry_topic>             <!-- 里程计话题名 -->
+        <odometry_frame>odom</odometry_frame>             <!-- 里程计参考坐标系 -->
+        <robot_base_frame>base_footprint</robot_base_frame> <!-- 机器人本体坐标系 -->
+
+        <!-- 里程计协方差 -->
+        <pose_covariance_diagonal>[0.001, 0.001, 1e-3, 1e-3, 1e-3, 0.01]</pose_covariance_diagonal>
+        <twist_covariance_diagonal>[0.001, 0.001, 1e-3, 1e-3, 1e-3, 0.01]</twist_covariance_diagonal>
+
+        <!-- 发布里程计 TF 变换 -->
+        <publish_odom_tf>true</publish_odom_tf>
+
+        <!-- 更新频率 -->
+        <update_rate>50</update_rate>
+
+        <!-- 控制类型 -->
+        <open_loop>false</open_loop> <!-- true=开环速度控制，false=闭环PID -->
+
+        <!-- 发布轮子关节状态到 /joint_states（供 robot_state_publisher 使用） -->
+        <publish_wheel_joint_state>true</publish_wheel_joint_state>
+        <!-- 发布轮子关节控制器状态（包含扭矩、速度等详细信息） -->
+        <publish_wheel_joint_controller_state>true</publish_wheel_joint_controller_state>
+
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

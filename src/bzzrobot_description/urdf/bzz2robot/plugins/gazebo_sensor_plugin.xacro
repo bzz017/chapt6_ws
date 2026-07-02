@@ -1,0 +1,364 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================
+       Gazebo 传感器插件配置文件
+       包含：激光雷达传感器插件、惯性测量单元（IMU）插件
+       
+       使用方式：在机器人总URDF文件中 include 此文件后，调用对应的宏
+       例如：
+       <xacro:laser_plugin link_name="laser_link" />
+       <xacro:imu_plugin link_name="imu_link" />
+       
+       关键概念：
+       1. <xacro:macro> - xacro宏定义，相当于代码中的"函数"
+          name="laser_plugin" - 宏的名字，调用时使用 <xacro:laser_plugin />
+          params="link_name" - 宏的参数，调用时传值 link_name="laser_link"
+       
+       2. <gazebo reference="xxx"> - 绑定到某个link上的Gazebo配置
+          告诉Gazebo：以下配置应用到名为xxx的link上
+       
+       3. <sensor name="xxx" type="ray"> - 定义Gazebo传感器
+          name="xxx" - 传感器在Gazebo内部的名字（不影响ROS话题名）
+          type="ray" - 传感器类型：ray=激光雷达，imu=惯性测量单元
+       
+       4. <plugin name="xxx" filename="xxx.so"> - 加载Gazebo-ROS桥接插件
+          name="xxx" - 插件实例名，会作为ROS节点名的一部分（如 /laser_gazebo_ros）
+          filename="xxx.so" - 插件动态库文件名，必须与系统安装的库一致
+       
+       5. <ros><remapping>~/out:=scan</remapping></ros> - ROS话题重映射
+          将插件默认的 ~/out 话题重命名为 /scan
+  ============================================ -->
+
+  <!-- 激光雷达传感器插件宏 -->
+  <!-- 
+       name="laser_plugin"：宏的名字，在bzz002.urdf.xacro中这样调用：
+       <xacro:laser_plugin link_name="laser_link" />
+       
+       params="link_name"：宏的参数，接收传感器所在的link名称
+       调用时传入 laser_link，宏内部用 ${link_name} 引用
+  -->
+  <xacro:macro name="laser_plugin" params="link_name">
+
+    <!-- 
+         gazebo reference="${link_name}"：
+         将以下传感器配置绑定到指定的link上（这里是 laser_link）
+         Gazebo会在这个link的位置创建传感器
+    -->
+    <gazebo reference="${link_name}">
+
+      <!-- 
+           sensor name="laserscan" type="ray"：
+           在Gazebo中定义一个射线型传感器，名字叫"laserscan"
+           type="ray" 表示这是激光雷达/深度传感器
+           
+           注意：这里的 name="laserscan" 只是Gazebo内部使用的名字，
+           不影响最终发布的ROS话题名，话题名由下面的 <ros><remapping> 决定
+      -->
+      <sensor name="laserscan" type="ray">
+        <!-- 传感器相对于link的位姿（这里是重合） -->
+        <pose>0 0 0 0 0 0</pose>
+        <!-- 是否在Gazebo可视化窗口中显示扫描线（红色射线） -->
+        <visualize>true</visualize>
+        <!-- 传感器数据更新频率（Hz） -->
+        <update_rate>5</update_rate>
+        <!-- 是否始终保持开启（必须为true，否则传感器不工作） -->
+        <always_on>true</always_on>
+
+        <!-- ray 标签：定义激光雷达的扫描参数 -->
+        <ray>
+          <!-- scan 标签：定义扫描范围和分辨率 -->
+          <scan>
+            <!-- horizontal：水平方向扫描 -->
+            <horizontal>
+              <samples>360</samples>          <!-- 一圈扫描点数（角度分辨率 = 360/360 = 1度） -->
+              <resolution>1.0</resolution>    <!-- 角度分辨率（度） -->
+              <min_angle>0.0</min_angle>      <!-- 起始角度（弧度），0 = 正前方 -->
+              <max_angle>6.28318530718</max_angle> <!-- 终止角度（弧度），6.283 = 2π = 360度 -->
+            </horizontal>
+          </scan>
+          <!-- range：定义测距范围 -->
+          <range>
+            <min>0.15</min>       <!-- 最小有效距离（米） -->
+            <max>10.0</max>       <!-- 最大有效距离（米） -->
+            <resolution>0.01</resolution> <!-- 距离分辨率（米） -->
+          </range>
+        </ray>
+
+        <!-- 
+             plugin name="scan" filename="libgazebo_ros_ray_sensor.so"：
+             加载Gazebo-ROS桥接插件，将Gazebo的激光数据转换为ROS话题
+             
+             name="scan"：插件实例名，会影响ROS节点名（如 /scan_gazebo_ros）
+             filename="libgazebo_ros_ray_sensor.so"：插件库文件名，必须与系统一致
+             
+             这个插件是关键：它负责把Gazebo内部的激光数据转换成ROS话题发布
+        -->
+        <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+          <!-- ros标签：配置ROS相关参数 -->
+          <ros>
+            <!-- namespace="/"：将话题放在全局命名空间，不添加前缀 -->
+            <namespace>/</namespace>
+            <!-- 
+                 remapping>~/out:=scan</remapping>：话题重映射
+                 插件默认发布到 ~/out（波浪号表示插件自己的命名空间）
+                 通过重映射，改为发布到 /scan
+                 
+                 如果不重映射，默认话题名是 /<plugin_name>/out = /scan/out
+            -->
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <!-- 
+               output_type="sensor_msgs/LaserScan"：指定输出消息类型
+               默认是 PointCloud2，这里强制输出 LaserScan（激光扫描数据）
+          -->
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <!-- 
+               frame_name="${link_name}"：数据的坐标系名称
+               告诉ROS：这些激光数据是在哪个坐标系下采集的
+               这里是 laser_link，与传感器所在的link一致
+          -->
+          <frame_name>${link_name}</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+
+  <!-- 惯性测量单元（IMU）传感器插件宏 -->
+  <!-- 
+       name="imu_plugin"：宏的名字，调用方式：<xacro:imu_plugin link_name="imu_link" />
+       params="link_name"：IMU所在的link名称
+  -->
+  <xacro:macro name="imu_plugin" params="link_name">
+
+    <!-- 将IMU传感器配置绑定到 imu_link -->
+    <gazebo reference="${link_name}">
+
+      <!-- 
+           sensor name="imu_sensor" type="imu"：
+           定义一个IMU传感器，type="imu"表示惯性测量单元
+           测量内容：角速度（angular_velocity）和线加速度（linear_acceleration）
+      -->
+      <sensor name="imu_sensor" type="imu">
+        <!-- 更新频率（Hz），IMU通常需要较高频率 -->
+        <update_rate>100</update_rate>
+        <!-- 始终开启 -->
+        <always_on>true</always_on>
+
+        <!-- imu标签：定义IMU的噪声参数（模拟真实传感器误差） -->
+        <imu>
+          <!-- angular_velocity：角速度噪声配置 -->
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>              <!-- 噪声均值（零偏） -->
+                <stddev>2e-4</stddev>         <!-- 噪声标准差 -->
+                <bias_mean>0.0000075</bias_mean>    <!-- 偏置均值（系统误差） -->
+                <bias_stddev>0.0000008</bias_stddev> <!-- 偏置标准差 -->
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+                <bias_mean>0.0000075</bias_mean>
+                <bias_stddev>0.0000008</bias_stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+                <bias_mean>0.0000075</bias_mean>
+                <bias_stddev>0.0000008</bias_stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <!-- linear_acceleration：线加速度噪声配置 -->
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+                <bias_mean>0.1</bias_mean>
+                <bias_stddev>0.001</bias_stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+
+        <!-- 
+             plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so"：
+             IMU的Gazebo-ROS桥接插件
+             
+             name="imu_plugin"：插件实例名，必须唯一，节点名会是 /imu_plugin_gazebo_ros
+             filename="libgazebo_ros_imu_sensor.so"：IMU插件库文件
+        -->
+        <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+          <ros>
+            <namespace>/</namespace>
+            <!-- 将默认的 ~/out 重映射为 /imu -->
+            <remapping>~/out:=imu</remapping>
+          </ros>
+          <!-- 
+               initial_orientation_as_reference：初始姿态是否作为参考
+               false表示使用世界坐标系作为姿态参考（符合REP 145标准）
+          -->
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+
+  <!-- 深度相机（RGBD相机）传感器插件宏 -->
+  <!-- 
+       name="depth_camera_plugin"：宏的名字，调用方式：
+       <xacro:depth_camera_plugin link_name="camera_link" />
+       
+       params="link_name"：相机所在的link名称
+       
+       深度相机同时输出：
+       1. 彩色图像（RGB）- /camera/image_raw
+       2. 深度图像（Depth）- /camera/depth/image_raw  
+       3. 相机内参信息 - /camera/camera_info
+  -->
+  <xacro:macro name="depth_camera_plugin" params="link_name">
+
+    <!-- 将深度相机配置绑定到 camera_link -->
+    <gazebo reference="${link_name}">
+
+      <!-- 
+           sensor name="camera_sensor" type="depth"：
+           定义一个深度相机传感器，type="depth"表示RGBD相机
+           与普通相机（type="camera"）的区别：
+           - type="camera"：只输出彩色图像
+           - type="depth"：同时输出彩色图像和深度图像
+      -->
+      <sensor name="camera_sensor" type="depth">
+        <!-- 传感器相对于link的位姿 -->
+        <!-- 相机朝向由camera_link的joint origin控制，这里保持默认即可 -->
+        <pose>0 0 0 0 0 0</pose>
+        <!-- 是否在Gazebo中可视化相机视锥体（蓝色框） -->
+        <visualize>true</visualize>
+        <!-- 更新频率（Hz），相机通常较低 -->
+        <update_rate>30</update_rate>
+        <!-- 始终开启 -->
+        <always_on>true</always_on>
+
+        <!-- 
+             camera标签：定义相机的光学参数
+             这些参数模拟真实相机的特性
+        -->
+        <camera name="camera">
+          <!-- 图像分辨率 -->
+          <image>
+            <width>640</width>       <!-- 图像宽度（像素） -->
+            <height>480</height>     <!-- 图像高度（像素） -->
+            <format>R8G8B8</format>  <!-- 图像格式：RGB 8位 -->
+          </image>
+          <!-- 相机内参（光学参数） -->
+          <intrinsics>
+            <fx>525</fx>             <!-- 焦距x（像素），模拟真实相机的焦距 -->
+            <fy>525</fy>             <!-- 焦距y（像素） -->
+            <cx>320</cx>             <!-- 光心x（像素），图像中心 -->
+            <cy>240</cy>             <!-- 光心y（像素） -->
+            <s>0</s>                 <!-- 倾斜参数（通常为0） -->
+          </intrinsics>
+          <!-- 近裁剪面（最近能看清的距离） -->
+          <clip>
+            <near>0.05</near>         <!-- 最近距离（米） -->
+            <far>10.0</far>         <!-- 最远距离（米） -->
+          </clip>
+        </camera>
+
+        <!-- 深度相机特有的深度参数 -->
+        <depth>
+          <!-- 深度图像分辨率（可以与彩色图像不同） -->
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>L16</format>     <!-- 深度格式：16位灰度（单位：毫米） -->
+          </image>
+          <!-- 深度裁剪范围（通常与相机一致） -->
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </depth>
+
+        <!-- 
+             plugin name="depth_camera" filename="libgazebo_ros_camera.so"：
+             深度相机的Gazebo-ROS桥接插件
+             
+             name="depth_camera"：插件实例名，必须唯一，节点名会是 /depth_camera_gazebo_ros
+             filename="libgazebo_ros_camera.so"：同时支持普通相机和深度相机
+             当sensor type="depth"时，自动发布深度相关话题
+             
+             默认发布的话题（未重映射时）：
+             - /camera/image_raw：彩色图像
+             - /camera/depth/image_raw：深度图像
+             - /camera/camera_info：相机内参
+        -->
+        <plugin name="depth_camera" filename="libgazebo_ros_camera.so">
+          <ros>
+            <!-- namespace="/camera"：将所有相机话题放在 /camera 命名空间下 -->
+            <namespace>/camera</namespace>
+          </ros>
+          <!-- 
+               frame_name="${link_name}"：数据的坐标系名称
+               这里是 camera_link，与相机所在的link一致
+          -->
+          <frame_name>${link_name}</frame_name>
+          <!-- 
+               hack_baseline：双目相机基线距离（米）
+               对于模拟深度相机，这个参数不影响实际测量，设为0.1即可
+          -->
+          <hack_baseline>0.1</hack_baseline>
+          <!-- 
+               depth_camera：是否作为深度相机使用
+               true表示启用深度图像发布
+          -->
+          <depth_camera>true</depth_camera>
+          <!-- 
+               image_topic：彩色图像话题名（在namespace下）
+               默认是 image_raw，所以完整话题是 /camera/image_raw
+          -->
+          <image_topic>image_raw</image_topic>
+          <!-- 
+               depth_image_topic：深度图像话题名（在namespace下）
+               默认是 depth/image_raw，完整话题是 /camera/depth/image_raw
+          -->
+          <depth_image_topic>depth/image_raw</depth_image_topic>
+          <!-- 
+               camera_info_topic：相机内参话题名（在namespace下）
+               默认是 camera_info，完整话题是 /camera/camera_info
+          -->
+          <camera_info_topic>camera_info</camera_info_topic>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+
+
+</robot>

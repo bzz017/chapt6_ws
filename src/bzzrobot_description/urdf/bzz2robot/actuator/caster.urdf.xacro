@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="caster_wheel" params="parent link_name joint_name *origin">
+
+    <link name="${link_name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <sphere radius="0.032" />
+        </geometry>
+        <material name="${link_name}_material">
+          <color rgba="0.7 0.7 0.7 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <sphere radius="0.032" />
+        </geometry>
+      </collision>
+      
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="0.1" />
+        <inertia ixx="5.12e-6" ixy="0" ixz="0" iyy="5.12e-6" iyz="0" izz="5.12e-6" />
+      </inertial>
+    </link>
+
+    <joint name="${joint_name}" type="fixed">
+      <parent link="${parent}" />
+      <child link="${link_name}" />
+      <xacro:insert_block name="origin" />
+    </joint>
+
+    <!-- Gazebo 万向轮摩擦设置：球体需要低摩擦才能顺滑滚动 -->
+    <gazebo reference="${link_name}">
+      <mu1>0.05</mu1>            <!-- 静摩擦系数，万向球需较小值 -->
+      <mu2>0.05</mu2>            <!-- 动摩擦系数 -->
+      <kp>1000000.0</kp>         <!-- 接触刚度 -->
+      <kd>1.0</kd>               <!-- 接触阻尼 -->
+      <minDepth>0.001</minDepth> <!-- 最小穿透深度 -->
+      <material>Gazebo/Grey</material>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

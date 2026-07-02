@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="camera_sensor" params="parent link_name joint_name *origin">
+    <link name="${link_name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+        <!-- 参数顺序：x长、y宽、z高 -->
+          <box size="0.05 0.2 0.04" />
+        </geometry>
+        <material name="camera_material">
+          <color rgba="0.0 0.0 1.0 0.8" />
+        </material>
+      </visual>
+      <!-- 相机传感器碰撞碰撞体 -->
+      <collision>
+       <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+        <!-- 参数顺序：x长、y宽、z高 -->
+          <box size="0.05 0.2 0.04" />
+        </geometry>
+        <material name="camera_material">
+          <color rgba="0.0 0.0 1.0 0.8" />
+        </material>
+      </collision>
+
+      <!-- 相机传感器惯性体 -->
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <mass value="0.1" />
+        <inertia ixx="3.47e-4" ixy="0" ixz="0" iyy="2.25e-4" iyz="0" izz="4.25e-4" />
+      </inertial>
+    </link>
+    
+
+    <!-- 相机传感器关节 -->
+    <joint name="${joint_name}" type="fixed">
+      <parent link="${parent}" />
+      <child link="${link_name}" />
+      <xacro:insert_block name="origin" />
+    </joint>
+  </xacro:macro>
+</robot>
