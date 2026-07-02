@@ -1,6 +1,7 @@
 from launch_ros.actions import Node  # 用于创建 ROS 节点
 from launch import LaunchDescription  # 用于创建 launch 描述符
-from launch.actions import ExecuteProcess, DeclareLaunchArgument  # 用于执行进程和声明 launch 参数
+from launch.actions import ExecuteProcess, DeclareLaunchArgument, RegisterEventHandler  # 用于执行进程、声明 launch 参数和注册事件处理器
+from launch.event_handlers import OnProcessExit  # 用于进程退出触发
 from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution  # 用于获取 launch 参数的值、执行命令和路径拼接
 from launch_ros.substitutions import FindPackageShare  # 用于查找包的 share 目录
 
@@ -29,6 +30,38 @@ def generate_launch_description():
         description="Gazebo 世界文件路径，默认值为 room.world"
     )
 
+    # 5. 将机器人模型生成到 Gazebo 中（需要保存引用以便后续 OnProcessExit 使用）
+    spawn_entity_node = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        arguments=[
+            '-entity', 'bzz002',          # 模型名称
+            '-topic', 'robot_description', # 从话题读取模型描述
+            '-x', '0',                     # 初始 X 坐标
+            '-y', '0',                     # 初始 Y 坐标
+            '-z', '0.0015',                # 初始 Z 坐标（抬高避免穿地）
+        ],
+        output='screen',
+    )
+
+    # 6.1 加载 joint_state_broadcaster（在 spawn_entity 完成后执行）
+    load_joint_state_broadcaster = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', 'bzzbot_joint_state_broadcaster', '--set-state', 'active'],
+        output='screen',
+    )
+
+    # # 6.2 加载 effort_controller（在 joint_state_broadcaster 完成后执行）
+    # load_effort_controller = ExecuteProcess(
+    #     cmd=['ros2', 'control', 'load_controller', 'bzzbot_effort_controller', '--set-state', 'active'],
+    #     output='screen',
+    # )
+
+    # 6.3 加载 diff_drive_controller（在 joint_state_broadcaster 完成后执行）
+    load_diff_drive_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', 'bzzbot_diff_drive_controller', '--set-state', 'active'],
+        output='screen',
+    )
+
     return LaunchDescription([
         declare_urdf_path,
         declare_world_path,
@@ -55,17 +88,22 @@ def generate_launch_description():
             output='screen',
         ),
 
-        # 5. 将机器人模型生成到 Gazebo 中
-        Node(
-            package='gazebo_ros',
-            executable='spawn_entity.py',
-            arguments=[
-                '-entity', 'bzz002',          # 模型名称
-                '-topic', 'robot_description', # 从话题读取模型描述
-                '-x', '0',                     # 初始 X 坐标
-                '-y', '0',                     # 初始 Y 坐标
-                '-z', '0.0015',                # 初始 Z 坐标（抬高避免穿地）
-            ],
-            output='screen',
+        # 5. 启动 spawn_entity 节点
+        spawn_entity_node,
+
+        # 6.1 等待 spawn_entity 完成后加载 joint_state_broadcaster
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=spawn_entity_node,
+                on_exit=[load_joint_state_broadcaster],
+            ),
+        ),
+
+        # 6.2 等待 joint_state_broadcaster 完成后加载 effort_controller
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=load_joint_state_broadcaster,
+                on_exit=[load_diff_drive_controller],
+            ),
         ),
     ])

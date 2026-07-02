@@ -254,7 +254,7 @@
            - type="camera"：只输出彩色图像
            - type="depth"：同时输出彩色图像和深度图像
       -->
-      <sensor name="camera_sensor" type="depth">
+      <sensor name="camera" type="depth">
         <!-- 传感器相对于link的位姿 -->
         <!-- 相机朝向由camera_link的joint origin控制，这里保持默认即可 -->
         <pose>0 0 0 0 0 0</pose>
@@ -310,7 +310,7 @@
              plugin name="depth_camera" filename="libgazebo_ros_camera.so"：
              深度相机的Gazebo-ROS桥接插件
              
-             name="depth_camera"：插件实例名，必须唯一，节点名会是 /depth_camera_gazebo_ros
+             name="depth_cam  era"：插件实例名，必须唯一，节点名会是 /depth_camera_gazebo_ros
              filename="libgazebo_ros_camera.so"：同时支持普通相机和深度相机
              当sensor type="depth"时，自动发布深度相关话题
              
@@ -321,39 +321,17 @@
         -->
         <plugin name="depth_camera" filename="libgazebo_ros_camera.so">
           <ros>
-            <!-- namespace="/camera"：将所有相机话题放在 /camera 命名空间下 -->
-            <namespace>/camera</namespace>
+            <namespace>/</namespace>
+            <remapping>~/image_raw:=camera/image_raw</remapping>
+            <remapping>~/depth/image_raw:=camera/depth/image_raw</remapping>
+            <remapping>~/camera_info:=camera/camera_info</remapping>
+            <remapping>~/points:=camera/points</remapping>
           </ros>
-          <!-- 
-               frame_name="${link_name}"：数据的坐标系名称
-               这里是 camera_link，与相机所在的link一致
-          -->
-          <frame_name>${link_name}</frame_name>
-          <!-- 
-               hack_baseline：双目相机基线距离（米）
-               对于模拟深度相机，这个参数不影响实际测量，设为0.1即可
-          -->
+          <!-- 相机坐标系（默认是camera_link_optical）：发布深度图像和点云的坐标系 -->
+          <frame_name>camera_link_optical</frame_name>
           <hack_baseline>0.1</hack_baseline>
-          <!-- 
-               depth_camera：是否作为深度相机使用
-               true表示启用深度图像发布
-          -->
           <depth_camera>true</depth_camera>
-          <!-- 
-               image_topic：彩色图像话题名（在namespace下）
-               默认是 image_raw，所以完整话题是 /camera/image_raw
-          -->
-          <image_topic>image_raw</image_topic>
-          <!-- 
-               depth_image_topic：深度图像话题名（在namespace下）
-               默认是 depth/image_raw，完整话题是 /camera/depth/image_raw
-          -->
-          <depth_image_topic>depth/image_raw</depth_image_topic>
-          <!-- 
-               camera_info_topic：相机内参话题名（在namespace下）
-               默认是 camera_info，完整话题是 /camera/camera_info
-          -->
-          <camera_info_topic>camera_info</camera_info_topic>
+          <point_cloud>true</point_cloud>
         </plugin>
       </sensor>
     </gazebo>

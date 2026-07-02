@@ -27,8 +27,8 @@
       <!-- wheel 惯性设置 -->
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0" />
-        <mass value="0.2" />
-        <inertia ixx="8.78e-5" ixy="0" ixz="0" iyy="8.78e-5" iyz="0" izz="2.05e-4" />
+        <mass value="0.5" />
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.0005" />
       </inertial>
     </link>
 
